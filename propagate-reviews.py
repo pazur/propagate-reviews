@@ -71,7 +71,8 @@ def test_if_last_patchet_is_cherry_pick(commit):
     assert(0 == subprocess.call((['git', 'fetch', project_url, last_patchset.ref])))
     assert(0 == subprocess.call(["git", "checkout", "-q", last_patchset.commitid]))
     assert(0 == subprocess.call(["git", "checkout", "-q", "HEAD~"]))
-    status = subprocess.call(["git", "cherry-pick", "-q", previous_patchset.commitid])
+    assert(0 == subprocess.call((['git', 'fetch', project_url, previous_patchset.ref])))
+    status = subprocess.call(["git", "cherry-pick", previous_patchset.commitid])
     if status != 0:
         return False
     process = Popen(['git', 'diff', 'HEAD', last_patchset.commitid], stdout=PIPE)
