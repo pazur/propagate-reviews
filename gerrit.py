@@ -7,14 +7,64 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_URL = os.environ['GERRIT_SERVER_URL']
 
 
+class CommandError(Exception):
+    def __init__(self, code, output=''):
+        self.code = code
+        self.output = output
+
+
+class GitCommander(object):
+    def __init__(self, server_name):
+        self.server_name = server_name
+
+    def push_for(self, project, branch):
+        arguments = [
+                     self._get_project_url(project),
+                     self._get_push_for_destination_and_target(branch)]
+        self._execute('push', arguments)
+
+    def _get_push_for_destination_and_target(branch):
+        return 'HEAD:refs/for/%s' % branch
+
+    def fetch_ref(self, project, ref):
+        arguments = [
+                     self._get_project_url(project),
+                     ref]
+        self._execute('fetch', arguments)
+
+    def _get_project_url(self, project_name):
+        return "ssh://%s:29418/%s" % (self.server_name, project_name)
+
+    def _execute(self, command, args):
+        bash_command_splitted = ['git', command] + args
+        self._log_execution(bash_command_splitted)
+        self._execute_bash_command(bash_command_splitted)
+
+    def _execute_bash_command(self, bash_command_splitted):
+        status_code = subprocess.call(bash_command_splitted)
+        if status_code != 0:
+            raise CommandError(status_code)
+
+    def _log_execution(self, bash_command_splitted):
+        print 'Executing %s' % (' '.join(bash_command_splitted))
+
+
 class Branch(object):
     def __init__(self, name, project):
         self.name = name
         self.project = project
-        self.project_url = "ssh://%s:29418/%s" % (SERVER_URL, self.project)
+
+    def get_commander(self, git_commander):
+        return BranchCommander(self, git_commander)
+
+
+class BranchCommander(object):
+    def __init__(self, branch, git_commander):
+        self.branch
+        self.git_commander = git_commander
 
     def push_for(self):
-        assert(0 == subprocess.call((['git', 'push', self.project_url, 'HEAD:refs/for/%s' % self.name])))
+        self.git_commander.push_for(self.branch.project, self.branch.name)
 
 
 class Commit(object):
@@ -80,13 +130,22 @@ class Patchset(object):
                 return value
         raise ValueError()
 
-    def checkout(self):
-        assert(0 == subprocess.call((['git', 'fetch', self.commit.project_url, self.ref])))
-        assert(0 == subprocess.call(["git", "checkout", "-q", self.commitid]))
-
     def cherry_pick(self):
         assert(0 == subprocess.call((['git', 'fetch', self.commit.project_url, self.ref])))
         assert(0 == subprocess.call(["git", "cherry-pick", self.commitid]))
+
+    def get_commander(self, git_commander):
+        return PatchsetCommander(self, git_commander)
+
+
+class PatchsetCommander(object):
+    def __init__(self, patchset, git_commander):
+        self.patchset = patchset
+        self.git_commander = git_commander
+
+    def checkout(self):
+        self.git_commander.fetch_ref(self.patchset.commit.project, self.patchset.ref)
+        self.git_commander.checkout_commit(self.patchset.commitid)
 
 
 def query_open_commits():
