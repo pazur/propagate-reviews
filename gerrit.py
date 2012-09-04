@@ -35,6 +35,9 @@ class GitCommander(object):
     def _get_project_url(self, project_name):
         return "ssh://%s:29418/%s" % (self.server_name, project_name)
 
+    def checkout_commit(self, commit_id):
+        self._execute('checkout', [str(commit_id)])
+
     def _execute(self, command, args):
         bash_command_splitted = ['git', command] + args
         self._log_execution(bash_command_splitted)
