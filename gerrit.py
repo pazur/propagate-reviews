@@ -23,7 +23,7 @@ class GitCommander(object):
                      self._get_push_for_destination_and_target(branch)]
         self._execute('push', arguments)
 
-    def _get_push_for_destination_and_target(branch):
+    def _get_push_for_destination_and_target(self, branch):
         return 'HEAD:refs/for/%s' % branch
 
     def fetch_ref(self, project, ref):
@@ -63,7 +63,7 @@ class Branch(object):
 
 class BranchCommander(object):
     def __init__(self, branch, git_commander):
-        self.branch
+        self.branch = branch
         self.git_commander = git_commander
 
     def push_for(self):

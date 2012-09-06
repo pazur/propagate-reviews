@@ -17,7 +17,7 @@ def main():
             if not commit.has_current_parent:
                 commit.get_parent().patchsets[-1].get_commander(git_commander).checkout()
                 last_patchset.cherry_pick()
-                commit.get_branch().push_for()
+                commit.get_branch().get_commander(git_commander).push_for()
 
 if __name__ == '__main__':
     main()
