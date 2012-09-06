@@ -38,15 +38,30 @@ class GitCommander(object):
     def checkout_commit(self, commit_id):
         self._execute('checkout', [str(commit_id)])
 
+    def checkout_fetched(self):
+        self._execute('checkout', ['FETCH_HEAD'])
+
+    def get_current_commit_id(self):
+        return self.get_id_of_commit_from_history(0)
+
+    def get_id_of_commit_from_history(self, offset):
+        output = self._execute('log', ['-%d' % (offset + 1), '--format=oneline'])
+        last_line = output.split("\n")[-2]
+        commitid = last_line.split()[0]
+        return commitid
+        
     def _execute(self, command, args):
         bash_command_splitted = ['git', command] + args
         self._log_execution(bash_command_splitted)
-        self._execute_bash_command(bash_command_splitted)
+        return self._execute_bash_command(bash_command_splitted)
 
     def _execute_bash_command(self, bash_command_splitted):
-        status_code = subprocess.call(bash_command_splitted)
+        process = subprocess.Popen(bash_command_splitted, stdout=subprocess.PIPE)
+        output = process.communicate()[0]
+        status_code = process.returncode
         if status_code != 0:
             raise CommandError(status_code)
+        return output
 
     def _log_execution(self, bash_command_splitted):
         print 'Executing %s' % (' '.join(bash_command_splitted))
@@ -69,15 +84,20 @@ class BranchCommander(object):
     def push_for(self):
         self.git_commander.push_for(self.branch.project, self.branch.name)
 
+    def checkout(self):
+        self.git_commander.fetch_ref(self.branch.project, self.branch.name)
+        self.git_commander.checkout_fetched()
 
 class Commit(object):
     def __init__(self, json_data):
+        self.json_data = json_data
         self.has_current_parent = (not 'dependsOn' in json_data or
                                    json_data['dependsOn'][0]['isCurrentPatchSet'])
         if 'dependsOn' in json_data:
             self.parent_id = json_data['dependsOn'][0]['id']
         else:
             self.parent_id = None
+        self.status = json_data['status']
         self.id = json_data['id']
         self.project = json_data['project']
         self.branch = json_data['branch']
@@ -86,6 +106,9 @@ class Commit(object):
         self.project_url = "ssh://%s:29418/%s" % (SERVER_URL, self.project)
         for patchset_data in json_data['patchSets']:
             self.patchsets.append(Patchset(patchset_data, self))
+
+    def is_merged(self):
+        return 'MERGED' == self.status
 
     def get_branch(self):
         return Branch(self.branch, self.project)
