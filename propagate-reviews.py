@@ -3,7 +3,7 @@ import os
 import subprocess
 from subprocess import Popen, PIPE
 
-from gerrit import Commit, Patchset, query_open_commits
+from gerrit import Commit, Patchset, query_open_commits, GitCommander
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_URL = os.environ['GERRIT_SERVER_URL']
@@ -18,12 +18,13 @@ def main():
 
 
 def test_if_last_patchet_is_cherry_pick(commit):
+    git_commander = GitCommander(SERVER_URL)
     os.chdir(os.path.join(BASE_DIR, "tmp"))
     assert(0 == subprocess.call("git reset -q --hard".split()))
     project_url =  "ssh://%s:29418/%s" % (SERVER_URL, commit.project)
     last_patchset = commit.patchsets[-1]
     previous_patchset = commit.patchsets[-2]
-    last_patchset.checkout()
+    last_patchset.get_commander(git_commander).checkout()
     assert(0 == subprocess.call(["git", "checkout", "-q", "HEAD~"]))
     assert(0 == subprocess.call((['git', 'fetch', project_url, previous_patchset.ref])))
     status = subprocess.call(["git", "cherry-pick", previous_patchset.commitid])
