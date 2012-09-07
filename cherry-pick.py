@@ -15,13 +15,14 @@ def main():
         last_patchset = commit.patchsets[-1]
         if last_patchset.review == 2:
             cherrypick_target = None
-            parent = commit.get_parent()
-            if not commit.has_current_parent or parent.is_merged():
+            parent = commit.parent_id and commit.get_parent()
+            if not commit.has_current_parent or not parent or parent.is_merged():
                 last_patchset.get_commander(git_commander).checkout()
                 last_patchset_parent_id = git_commander.get_id_of_commit_from_history(1)
-                parent.patchsets[-1].get_commander(git_commander).checkout()
+                if parent:
+                    parent.patchsets[-1].get_commander(git_commander).checkout()
                 branch_commander = commit.get_branch().get_commander(git_commander)
-                if parent.is_merged():
+                if not parent or parent.is_merged():
                     branch_commander.checkout()
                 current_commit_id = git_commander.get_current_commit_id()
                 if last_patchset_parent_id != current_commit_id:
