@@ -1,4 +1,4 @@
-from gerrit import Commit, Patchset, query_open_commits, GitCommander
+from gerrit import Commit, CherryPickError, Patchset, query_open_commits, GitCommander
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -17,8 +17,12 @@ def main():
             checkout_parent_or_branch(branch_commander, parent, git_commander)
             current_commit_id = git_commander.get_current_commit_id()
             if last_patchset_parent_id != current_commit_id:
-                last_patchset.cherry_pick()
-                branch_commander.push_for()
+                try:
+                    last_patchset.cherry_pick()
+                except CherryPickError:
+                    commit.verify(-1, "Can't cherry-pick on parent")
+                else:
+                    branch_commander.push_for()
 
 def get_open_commits_with_review_2():
     commits = get_open_commits()

@@ -12,6 +12,8 @@ class CommandError(Exception):
         self.code = code
         self.output = output
 
+class CherryPickError(CommandError):
+    pass
 
 class GitCommander(object):
     def __init__(self, server_name):
@@ -117,9 +119,15 @@ class Commit(object):
         return self.patchsets[-1].is_reviewed()
 
     def review(self, value, message):
+        self._review_or_verify(value, message, '--code-review')
+
+    def verify(self, value, message):
+        self._review_or_verify(value, message, '--verified')
+
+    def _review_or_verify(self, value, message, action):
         args = ['ssh', '-p', '29418', SERVER_URL,
                'gerrit', 'review',
-               '--code-review', str(value),
+               action, str(value),
                '--message', '"%s"' % message,
                str(self.patchsets[-1].commitid)]
         assert(0 == subprocess.call(args))
@@ -158,7 +166,9 @@ class Patchset(object):
 
     def cherry_pick(self):
         assert(0 == subprocess.call((['git', 'fetch', self.commit.project_url, self.ref])))
-        assert(0 == subprocess.call(["git", "cherry-pick", self.commitid]))
+        status = subprocess.call(["git", "cherry-pick", self.commitid])
+        if status:
+            raise CherryPickError(status)
 
     def get_commander(self, git_commander):
         return PatchsetCommander(self, git_commander)
