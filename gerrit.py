@@ -164,6 +164,19 @@ class Patchset(object):
                 return value
         raise ValueError()
 
+    def get_verify_value_for_user(self, username):
+        return self.get_approval_value_for_user(username, 'VRIF')
+
+    def get_review_value_for_user(self, username):
+        return self.get_approval_value_for_user(username, 'CRVW')
+
+    def get_approval_value_for_user(self, username, type):
+        for approval in self.data.get('approvals', []):
+            if (type == approval['type'] and
+                approval['by']['name'] == username):
+                return int(approval['value'])
+        return None
+
     def cherry_pick(self):
         assert(0 == subprocess.call((['git', 'fetch', self.commit.project_url, self.ref])))
         status = subprocess.call(["git", "cherry-pick", self.commitid])

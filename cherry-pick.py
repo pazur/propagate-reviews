@@ -3,11 +3,12 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVER_URL = os.environ['GERRIT_SERVER_URL']
+GERRIT_USER_NAME = os.environ['GERRIT_USER_NAME']
 
 def main():
     git_commander = GitCommander(SERVER_URL)
     os.chdir("tmp")
-    for commit in get_open_commits_with_review_2():
+    for commit in get_open_commits_with_appropriate_approval():
         last_patchset = commit.patchsets[-1]
         parent = get_commit_parent(commit)
         if should_cherry_pick(commit, parent):
@@ -20,16 +21,19 @@ def main():
                 try:
                     last_patchset.cherry_pick()
                 except CherryPickError:
-                    commit.verify(-1, "Can't cherry-pick on parent")
+                    if last_patchset.get_verify_value_for_user(GERRIT_USER_NAME) != -1:
+                        commit.verify(-1, "Can't cherry-pick on parent")
                 else:
                     branch_commander.push_for()
 
-def get_open_commits_with_review_2():
+def get_open_commits_with_appropriate_approval():
     commits = get_open_commits()
     for commit in commits:
         commit = commit.get()
         last_patchset = commit.patchsets[-1]
-        if last_patchset.review == 2:
+        if (last_patchset.review == 2 or
+            last_patchset.get_review_value_for_user(GERRIT_USER_NAME) == -1 or
+            last_patchset.get_verify_value_for_user(GERRIT_USER_NAME) == -1):
             yield commit
 
 def get_open_commits():
