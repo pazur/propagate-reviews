@@ -201,11 +201,10 @@ def query_open_commits():
     return query_commits("is:open")
 
 def query_commits(query):
-    process = Popen(['ssh', '-p', '29418', SERVER_URL, 'gerrit', 'query',
-                     query, '--all-approvals', '--dependencies', '--format', 'json'],
-                    stdout=PIPE)
-    os.waitpid(process.pid, 0)
-    output = process.communicate()[0]
+    output = subprocess.check_output(['ssh', '-p', '29418', SERVER_URL,
+                                      'gerrit', 'query', query,
+                                      '--all-approvals', '--dependencies',
+                                      '--format', 'json'])
     for json_data in output.split("\n"):
         if json_data:
             data = json.loads(json_data)
