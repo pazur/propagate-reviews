@@ -18,13 +18,12 @@ def main():
             checkout_parent_or_branch(branch_commander, parent, git_commander)
             current_commit_id = git_commander.get_current_commit_id()
             if last_patchset_parent_id != current_commit_id:
-                try:
-                    last_patchset.cherry_pick()
-                except CherryPickError:
-                    if last_patchset.get_verify_value_for_user(GERRIT_USER_NAME) != -1:
-                        commit.verify(-1, "Can't cherry-pick on parent")
-                else:
-                    branch_commander.push_for()
+                do_cherry_pick(commit, branch_commander)
+        elif parent and parent.is_abandoned():
+            ancestor = get_first_not_abandoned_ancestor(commit)
+            branch_commander = commit.get_branch().get_commander(git_commander)
+            checkout_parent_or_branch(branch_commander, ancestor, git_commander)
+            do_cherry_pick(commit, branch_commander)
 
 def get_open_commits_with_appropriate_approval():
     commits = get_open_commits()
@@ -52,6 +51,24 @@ def checkout_parent_or_branch(branch_commander, parent, git_commander):
         branch_commander.checkout()
     else:
         parent.patchsets[-1].get_commander(git_commander).checkout()
+
+def get_first_not_abandoned_ancestor(commit):
+    while commit.parent_id:
+        parent = commit.get_parent()
+        if not parent.is_abandoned():
+            return parent
+        commit = parent
+    return None
+
+def do_cherry_pick(commit, branch_commander):
+    last_patchset = commit.patchsets[-1]
+    try:
+        last_patchset.cherry_pick()
+    except CherryPickError:
+        if last_patchset.get_verify_value_for_user(GERRIT_USER_NAME) != -1:
+            commit.verify(-1, "Can't cherry-pick on parent")
+    else:
+        branch_commander.push_for()
 
 if __name__ == '__main__':
     main()

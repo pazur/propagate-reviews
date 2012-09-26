@@ -112,6 +112,9 @@ class Commit(object):
     def is_merged(self):
         return 'MERGED' == self.status
 
+    def is_abandoned(commit):
+        return commit.status == 'ABANDONED'
+
     def get_branch(self):
         return Branch(self.branch, self.project)
 
