@@ -15,6 +15,8 @@ def main():
         if not commit.is_reviewed() and len(commit.patchsets) > 1 and commit.patchsets[-2].review == 2:
             if test_if_last_patchet_is_cherry_pick(commit):
                 commit.review(+2, "Propagating review value from previous commit.")
+                if previous_patchset_was_submitted(commit):
+                    commit.submit("Propagating SUBMIT from previous commit.")
 
 
 def test_if_last_patchet_is_cherry_pick(commit):
@@ -35,6 +37,9 @@ def test_if_last_patchet_is_cherry_pick(commit):
     output = process.communicate()[0]
     return output == ''
 
+def previous_patchset_was_submitted(commit):
+    previous_patchset = commit.patchsets[-2]
+    return previous_patchset.is_submitted()
 
 if __name__ == '__main__':
     main()

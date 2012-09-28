@@ -127,6 +127,9 @@ class Commit(object):
     def verify(self, value, message):
         self._review_or_verify(value, message, '--verified')
 
+    def submit(self, message):
+        self._review_or_verify('', message, '--submit')
+
     def _review_or_verify(self, value, message, action):
         args = ['ssh', '-p', '29418', SERVER_URL,
                'gerrit', 'review',
@@ -157,6 +160,11 @@ class Patchset(object):
     def is_reviewed(self):
         return bool(list(self.get_review_values()))
 
+    def is_submitted(self):
+        for approval in self.data.get('approvals', []):
+            if approval.get('type', None) == 'SUBM' and approval.get('value', None) == '1':
+                return True
+        return False
 
     def interpret_review_values(self, values):
         values = list(values)
